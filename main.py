@@ -1,7 +1,4 @@
 import cv2
-import tkinter as tk
-# from FaceParameters import FaceParameters
-from GUIApp import GUIApp
 from FaceParams import FaceParams
 
 
@@ -13,7 +10,9 @@ def main():
     image = cv2.imread("images/image.png")
     assert image is not None, "Изображение не загружено. Проверьте путь к файлу."
 
-    image = cv2.resize(image, (479, 679))
+    h, w, _ = image.shape
+
+    image = cv2.resize(image, (int(w / 2), int(h / 2)))
 
     img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
