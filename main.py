@@ -10,7 +10,7 @@ def main():
 
     face_params = FaceParams()
 
-    image = cv2.imread("image.png")
+    image = cv2.imread("images/image.png")
     assert image is not None, "Изображение не загружено. Проверьте путь к файлу."
 
     image = cv2.resize(image, (479, 679))
