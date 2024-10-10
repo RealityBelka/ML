@@ -153,7 +153,7 @@ class FaceParams:
 
     def check_face_obstruction(self, image):
         """Проверяет, полностью ли открыто лицо на изображении"""
-        return "[замокано]"
+        return "[mocked]"
 
     def check_neutral_status(self, image):
         """Проверяет выражение лица на нейтральность"""

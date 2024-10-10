@@ -1,0 +1,19 @@
+{
+    "faces_count": 1,
+    "head_pose": {
+        "yaw": -2.630613498013558,
+        "pitch": -49.16057526706381,
+        "roll": -22.061420413412645
+    },
+    "eyes_distance": 59.197869045317006,
+    "head_size": 0.21697071999192227,
+    "is_obstructed": "[mocked]",
+    "emotion_status": "neutral",
+    "is_real": true,
+    "antispoof_score": 0.6873356997966766,
+    "eyes_closed": false,
+    "eyes_rate": 0.22280948650079568,
+    "illumination": 181.55508763942638,
+    "distortion": 489.68688342762783,
+    "is_blurred": false
+}

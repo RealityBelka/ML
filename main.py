@@ -1,13 +1,26 @@
 import cv2
+import numpy as np
+import json
 from FaceParams import FaceParams
 
 
+def bytes_to_ndarray(image_bytes):
+    # Преобразование байтов в numpy массив (массив байт)
+    nparr = np.frombuffer(image_bytes, np.uint8)
+
+    # Декодирование изображения из numpy массива в формате OpenCV
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    return image
+
+
 def main():
-    SHOW_IMAGE = False
+    SHOW_IMAGE = True
 
     face_params = FaceParams()
 
-    image = cv2.imread("images/image.png")
+    image = cv2.imread("images/image.png") # Либо bytes_to_ndarray
+
     assert image is not None, "Изображение не загружено. Проверьте путь к файлу."
 
     h, w, _ = image.shape
@@ -18,6 +31,10 @@ def main():
 
     # Вызов функций определения параметров
     faces_count = face_params.get_faces_count(img_rgb)
+
+    result = {
+        "faces_count": faces_count
+    }
 
     if faces_count == 1:
         head_pose = face_params.get_head_pose(img_rgb)
@@ -30,28 +47,44 @@ def main():
         illumination = face_params.calculate_face_brightness(img_rgb)
         distortion, is_blurred = face_params.calculate_blurriness(image)
 
-        print("faces_count: ", faces_count)
-        print("head_pose: ", head_pose)
-        print("eyes_distance: ", eyes_distance)
-        print("head_size: ", head_size)
-        print("is_obstructed: ", is_obstructed)
-        print("emotion_status: ", emotion_status)
-        print("is_real: ", is_real, "; antispoof_score: ", antispoof_score)
-        print("eyes_closed: ", eyes_closed, "; eyes_rate: ", eyes_rate)
-        print("illumination: ", illumination)
-        print("distortion: ", distortion, "; is_blurred: ", is_blurred)
+        result.update({
+            "head_pose": head_pose,
+            "eyes_distance": eyes_distance,
+            "head_size": head_size,
+            "is_obstructed": is_obstructed,
+            "emotion_status": emotion_status,
+            "is_real": is_real,
+            "antispoof_score": antispoof_score,
+            "eyes_closed": eyes_closed,
+            "eyes_rate": eyes_rate,
+            "illumination": illumination,
+            "distortion": distortion,
+            "is_blurred": is_blurred
+        })
 
     else:
-        print("faces_count: ", faces_count)
-        print("head_pose: ", None)
-        print("eyes_distance: ", None)
-        print("head_size: ", None)
-        print("is_obstructed: ", None)
-        print("emotion_status: ", None)
-        print("is_real: ", None, "; antispoof_score: ", None)
-        print("eyes_closed: ", None, "; eyes_rate: ", None)
-        print("illumination: ", None)
-        print("distortion: ", None, "; is_blurred: ", None)
+        result.update({
+            "head_pose": None,
+            "eyes_distance": None,
+            "head_size": None,
+            "is_obstructed": None,
+            "emotion_status": None,
+            "is_real": None,
+            "antispoof_score": None,
+            "eyes_closed": None,
+            "eyes_rate": None,
+            "illumination": None,
+            "distortion": None,
+            "is_blurred": None
+        })
+
+    # Вывод данных в формате JSON
+    result_json = json.dumps(result, indent=4)
+    print(result_json)
+
+    # Запись данных в файл JSON
+    with open("output.json", "w") as outfile:
+        json.dump(result, outfile, indent=4)
 
     if SHOW_IMAGE:
         face_params.draw_face_landmarks(image)
