@@ -1,62 +1,64 @@
 import cv2
 import tkinter as tk
-from deepface import DeepFace
-from FaceParameters import FaceParameters
+# from FaceParameters import FaceParameters
 from GUIApp import GUIApp
+from FaceParams import FaceParams
 
-import os
-import warnings
-import absl.logging
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Отключаем логи TensorFlow
-warnings.filterwarnings("ignore")  # Отключаем все предупреждения Python
-absl.logging.set_verbosity(absl.logging.ERROR)  # Отключаем логи absl
 
 def main():
+    SHOW_IMAGE = False
 
-    face_params = FaceParameters()
+    face_params = FaceParams()
 
-    # Создание GUI
-    root = tk.Tk()
-    gui_app = GUIApp(root)
+    image = cv2.imread("image.png")
+    assert image is not None, "Изображение не загружено. Проверьте путь к файлу."
 
-    # Запуск видео захвата через OpenCV
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
-    cap.set(cv2.CAP_PROP_FPS, 30)
+    image = cv2.resize(image, (479, 679))
 
-    frame_counter = 0
-    while True:
-        frame_counter += 1
-        if frame_counter % 10 != 0:  # Обрабатываем только каждый 10 кадр
-            continue
+    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        success, frame = cap.read()
-        if not success:
-            break
+    # Вызов функций определения параметров
+    faces_count = face_params.get_faces_count(img_rgb)
 
-        # Обработка параметров лица
-        face_count = face_params.get_face_count(frame)
-        head_angles = face_params.get_head_angles(frame)
-        eye_distance = face_params.get_eye_distance(frame)
-        face_expression = face_params.get_face_expression(frame)
-        eyes_closed = face_params.are_eyes_closed(frame)
+    if faces_count == 1:
+        head_pose = face_params.get_head_pose(img_rgb)
+        eyes_distance = face_params.get_eye_distance(img_rgb, True)
+        head_size = face_params.get_head_size(img_rgb)
+        is_obstructed = face_params.check_face_obstruction(img_rgb)
+        emotion_status = face_params.check_neutral_status(img_rgb)
+        is_real, antispoof_score = face_params.check_spoofing(img_rgb)
+        eyes_closed, eyes_rate = face_params.check_eyes_closed(img_rgb)
+        illumination = face_params.calculate_face_brightness(img_rgb)
+        distortion, is_blurred = face_params.calculate_blurriness(image)
 
-        # Обновление GUI параметров
-        gui_app.update_parameters(face_count, head_angles, eye_distance, face_expression, eyes_closed)
+        print("faces_count: ", faces_count)
+        print("head_pose: ", head_pose)
+        print("eyes_distance: ", eyes_distance)
+        print("head_size: ", head_size)
+        print("is_obstructed: ", is_obstructed)
+        print("emotion_status: ", emotion_status)
+        print("is_real: ", is_real, "; antispoof_score: ", antispoof_score)
+        print("eyes_closed: ", eyes_closed, "; eyes_rate: ", eyes_rate)
+        print("illumination: ", illumination)
+        print("distortion: ", distortion, "; is_blurred: ", is_blurred)
 
-        # Отображение видео в окне OpenCV
-        cv2.imshow('Face Parameters Camera', frame)
-        if cv2.waitKey(1) & 0xFF == 27:  # Нажатие ESC для выхода
-            break
+    else:
+        print("faces_count: ", faces_count)
+        print("head_pose: ", None)
+        print("eyes_distance: ", None)
+        print("head_size: ", None)
+        print("is_obstructed: ", None)
+        print("emotion_status: ", None)
+        print("is_real: ", None, "; antispoof_score: ", None)
+        print("eyes_closed: ", None, "; eyes_rate: ", None)
+        print("illumination: ", None)
+        print("distortion: ", None, "; is_blurred: ", None)
 
-        # Обновляем Tkinter интерфейс
-        root.update_idletasks()
-        root.update()
-
-    cap.release()
-    cv2.destroyAllWindows()
+    if SHOW_IMAGE:
+        face_params.draw_face_landmarks(image)
+        cv2.imshow("Image", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
