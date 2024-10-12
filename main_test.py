@@ -35,11 +35,11 @@ def main():
             eyes_distance = face_params.get_eye_distance(img_rgb, False)
             # head_size = face_params.get_head_size(img_rgb)
             # is_obstructed = face_params.check_face_obstruction(img_rgb)
-            # emotion_status = face_params.check_neutral_status(img_rgb)
-            # is_real, antispoof_score = face_params.check_spoofing(img_rgb)
-            # eyes_closed, eyes_rate = face_params.check_eyes_closed(img_rgb)
+            is_neutral = face_params.check_neutral_status(img_rgb)
+            is_real = face_params.check_spoofing(img_rgb)
+            eyes_closed = face_params.check_eyes_closed(img_rgb)
             illumination = face_params.calculate_face_illumination(img_rgb)
-            # distortion, is_blurred = face_params.calculate_blurriness(image)
+            distortion = face_params.calculate_blurriness(image)
 
             # Обновление GUI параметров
             gui_app.update_parameters(faces_count,
@@ -47,11 +47,11 @@ def main():
                                       eyes_distance=eyes_distance,
                                       # head_size=head_size,
                                       # is_obstructed=is_obstructed,
-                                      # emotion_status=emotion_status,
-                                      # is_real=is_real,
-                                      # eyes_closed=eyes_closed,
+                                      is_neutral=is_neutral,
+                                      is_real=is_real,
+                                      eyes_closed=eyes_closed,
                                       illumination=illumination,
-                                      # is_blurred=is_blurred
+                                      distortion=distortion
                                       )
 
             # Обновляем Tkinter интерфейс

@@ -106,7 +106,6 @@ class FaceParams:
                 if pitch < 0:
                     pitch += 360
 
-
                 head_angles = {'yaw': yaw, 'pitch': pitch, 'roll': roll}
 
                 return head_angles
@@ -248,18 +247,19 @@ class FaceParams:
                                       actions=['emotion'],
                                       enforce_detection=False,
                                       detector_backend='ssd')
-            return result[0]['dominant_emotion']
+            if result[0]['dominant_emotion'] in ['neutral', 'happy', 'sad']:
+                return True
+            return False
         except:
-            return None
+            return False
 
     def check_spoofing(self, img_rgb):
         """Проверяет лицо на изображении на подлиность"""
         try:
             result = detection.extract_faces(img_rgb, anti_spoofing=True)
-            return result[0]['is_real'], result[0]['antispoof_score']
-        except ValueError as v:
-            # print("check_spoofing --> Value Error: ", v)
-            return None, None
+            return result[0]['is_real']
+        except:
+            return None
 
     def check_eyes_closed(self, img_rgb):
         """Проверяет, закрыты ли глаза"""
@@ -286,8 +286,8 @@ class FaceParams:
                 else:
                     eyes_closed = False
 
-                return eyes_closed, eyes_rate
-        return None, None
+                return eyes_closed
+        return None
 
     def get_eye_rate(self, landmarks, eye_idxs):
         """Технический метод, возращает отношение длины и ширины глаза"""
@@ -342,8 +342,9 @@ class FaceParams:
 
         brightness = round(brightness)
         variance = round(variance)
+        CV = int(variance / brightness)
 
-        return brightness, variance
+        return brightness, CV
 
     def calculate_blurriness(self, image):
         """Функция для определения размытости изображения с использованием лапласиана.
@@ -355,7 +356,7 @@ class FaceParams:
 
         # Применение Лапласиана для вычисления резкости
         laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-        if laplacian_var < 100:
+        if laplacian_var < 200:
             is_blurred = True
         else:
             is_blurred = False

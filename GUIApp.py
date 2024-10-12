@@ -43,11 +43,11 @@ class GUIApp:
                           eyes_distance=None,
                           head_size=None,
                           is_obstructed=None,
-                          emotion_status=None,
+                          is_neutral=None,
                           is_real=None,
                           eyes_closed=None,
                           illumination=None,
-                          is_blurred=None
+                          distortion=None
                           ):
         """Обновляет значения параметров в GUI"""
         self.label_face_count.config(text=f"Количество лиц: {face_count}")
@@ -55,8 +55,8 @@ class GUIApp:
         self.label_eye_distance.config(text=f"Расстояние между глазами: {eyes_distance}")
         self.label_head_size.config(text=f"Размер головы: {head_size}")
         self.label_obstruction.config(text=f"Перекрытие лица: {is_obstructed}")
-        self.label_expression.config(text=f"Выражение лица: {emotion_status}")
+        self.label_expression.config(text=f"Нейтральное выражение лица: {is_neutral}")
         self.label_spoofing.config(text=f"Реальное лицо: {is_real}")
         self.label_eyes_closed.config(text=f"Глаза закрыты: {eyes_closed}")
         self.label_illumination.config(text=f"Освещённость: {illumination}")
-        self.label_distorsion.config(text=f"Дисторсия: {is_blurred}")
+        self.label_distorsion.config(text=f"Дисторсия: {distortion}")

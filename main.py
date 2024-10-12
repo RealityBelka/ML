@@ -38,21 +38,32 @@ def image_process(face_params, image):
     # is_obstructed = face_params.check_face_obstruction(img_rgb)
 
     '''6'''
-    illumination = face_params.calculate_face_brightness(img_rgb)
+    brightness, CV = face_params.calculate_face_illumination(img_rgb)
+    if brightness < 50 or 150 < brightness:
+        return flag, "Обеспечьте равномерное освещение лица"
+    if CV > 10:
+        return flag, "Обеспечьте равномерное освещение лица"
 
     '''7'''
-    # distortion, is_blurred = face_params.calculate_blurriness(image)
+    _, is_blurred = face_params.calculate_blurriness(image)
+    if is_blurred:
+        return flag, "Отодвиньте телефон от лица для фокусировки"
 
     '''8'''
-    # not_neutral = face_params.check_neutral_status(img_rgb)
+    is_neutral = face_params.check_neutral_status(img_rgb)
+    if not is_neutral:
+        return flag, "Выражение лица должно быть нейтральным"
 
     '''9'''
-    # eyes_closed, eyes_rate = face_params.check_eyes_closed(img_rgb)
+    # Обрабатывается постфактум на клиенте
+    # eyes_closed = face_params.check_eyes_closed(img_rgb)
+    # if eyes_closed:
+    #     return flag, "Откройте глаза"
 
     '''10'''
-    # is_real, antispoof_score = face_params.check_spoofing(img_rgb)
-
-
+    is_real = face_params.check_spoofing(img_rgb)
+    if not is_real:
+        return flag, "Кажется, в кадре не реальный человек"
 
 
 def main():
@@ -71,7 +82,6 @@ def main():
         h, w, _ = image.shape
 
         image = cv2.resize(image, (int(w / 3), int(h / 3)))
-
 
         if SHOW_IMAGE:
             face_params.draw_face_landmarks(image)
