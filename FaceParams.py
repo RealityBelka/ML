@@ -238,7 +238,54 @@ class FaceParams:
 
     def check_face_obstruction(self, img_rgb):
         """Проверяет, полностью ли открыто лицо на изображении"""
+        results = self.face_mesh.process(img_rgb)
+
+        if results.multi_face_landmarks:
+            for face_landmarks in results.multi_face_landmarks:
+                landmarks_to_check = [1, 6, 33, 61, 133, 199, 206, 263, 291, 362, 426]
+                obstruction_detected = False
+
+                for idx in landmarks_to_check:
+                    if face_landmarks.landmark[idx].visibility < 0.3:
+                        return True
+
+                # obstruction_detected = self.detect_glasses(img_rgb, face_landmarks)
+
+                if obstruction_detected:
+                    return True
+
+            return False
+        else:
+            return True
+
+    def detect_glasses(self, image, face_landmarks):
+        """Обнаружение очков с помощью контраста цветов"""
+        eye_points = [33, 133, 362, 263]
+        h, w, _ = image.shape
+        eye_regions = []
+
+        for point in eye_points:
+            x = int(face_landmarks.landmark[point].x * w)
+            y = int(face_landmarks.landmark[point].y * h)
+            eye_regions.append((x, y))
+
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        cv2.fillPoly(mask, [np.array(eye_regions, dtype=np.int32)], 255)
+        mean_color = cv2.mean(image, mask=mask)[:3]
+
+        face_center_color = self.get_face_center_color(image, face_landmarks)
+        color_diff = np.linalg.norm(np.array(mean_color) - np.array(face_center_color))
+
+        if color_diff > 50:  # Порог контраста
+            return True
+
         return False
+
+    def get_face_center_color(self, image, face_landmarks):
+        h, w, _ = image.shape
+        cx = int(face_landmarks.landmark[1].x * w)
+        cy = int(face_landmarks.landmark[1].y * h)
+        return image[cy, cx]
 
     def check_neutral_status(self, img_rgb):
         """Проверяет выражение лица на нейтральность"""
@@ -306,7 +353,7 @@ class FaceParams:
         eye_size_v1 = np.linalg.norm(low1_landmark - up1_landmark)
         eye_size_v2 = np.linalg.norm(low2_landmark - up2_landmark)
 
-        eye_rate = (eye_size_v1 + eye_size_v2) / (2 * eye_size_h + 10**-4)
+        eye_rate = (eye_size_v1 + eye_size_v2) / (2 * eye_size_h + 10 ** -4)
 
         return eye_rate
 

@@ -1,6 +1,5 @@
 import cv2
 from FaceParams import FaceParams
-# from time import time
 
 
 def image_process(face_params, image):
@@ -16,13 +15,13 @@ def image_process(face_params, image):
         return flag, "Лицо не обнаружено"
 
     '''2'''
-    # head_size = face_params.get_head_size(img_rgb)  # Выполняет ту же функцию, что eyes_distance
+    '''# head_size = face_params.get_head_size(img_rgb)  # Выполняет ту же функцию, что eyes_distance
     is_in_frame = face_params.is_face_in_frame(image)
     if is_in_frame:
         face_params.draw_central_rectangle(image, color=(0, 255, 0))
     else:
         face_params.draw_central_rectangle(image, color=(0, 0, 255))
-        return flag, "Лицо должно полностью помещаться в рамку"
+        return flag, "Лицо должно полностью помещаться в рамку"'''
 
     '''3'''
     eyes_distance = face_params.get_eye_distance(img_rgb)
@@ -40,9 +39,9 @@ def image_process(face_params, image):
     '''6'''
     brightness, CV = face_params.calculate_face_illumination(img_rgb)
     if brightness < 50 or 150 < brightness:
-        return flag, "Обеспечьте равномерное освещение лица"
-    if CV > 10:
-        return flag, "Обеспечьте равномерное освещение лица"
+        return flag, "Обеспечьте равномерное освещение лица (brightness)"
+    if CV > 15:
+        return flag, "Обеспечьте равномерное освещение лица (CV)"
 
     '''7'''
     _, is_blurred = face_params.calculate_blurriness(image)
@@ -65,33 +64,34 @@ def image_process(face_params, image):
     if not is_real:
         return flag, "Кажется, в кадре не реальный человек"
 
+    flag = True
+
+    return flag, None
+
 
 def main():
-
-    SHOW_IMAGE = True
+    SHOW_IMAGE = False
 
     face_params = FaceParams()
 
-    cap = cv2.VideoCapture(0)
+    # Пример входных данных (только image нужно из binary перевести)
+    image = cv2.imread("images/bad/img_459.jpg")
+    rectangle_points = {"top_left": (10, 10), "bottom_right": (40, 60)}
 
-    while True:
-        success, image = cap.read()
-        if not success:
-            break
+    h, w, _ = image.shape
 
-        h, w, _ = image.shape
+    image = cv2.resize(image, (int(w / 3), int(h / 3)))
 
-        image = cv2.resize(image, (int(w / 3), int(h / 3)))
+    ok, message = image_process(face_params, image)
 
-        if SHOW_IMAGE:
-            face_params.draw_face_landmarks(image)
-            cv2.imshow("Image", image)
-            if cv2.waitKey(1) & 0xFF == 27:  # ESC для выхода
-                break
+    if SHOW_IMAGE:
+        face_params.draw_face_landmarks(image)
+        cv2.imshow("Image", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-    image.release()
-    cv2.destroyAllWindows()
+    return {"ok": ok, "message": message}
 
 
 if __name__ == "__main__":
-    main()
+    print(main())
