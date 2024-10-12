@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from FaceParams import FaceParams
 
 
@@ -69,13 +70,29 @@ def image_process(face_params, image):
     return flag, None
 
 
+def bytes_to_ndarray(image_bytes):
+    """Преобразует изображение из формата bytes в np.ndarray для работы с OpenCV."""
+    np_arr = np.frombuffer(image_bytes, np.uint8)
+
+    image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    assert image is not None, "Ошибка при декодировании изображения. Проверьте корректность данных."
+
+    return image
+
+
 def main():
     SHOW_IMAGE = False
 
     face_params = FaceParams()
 
-    # Пример входных данных (только image нужно из binary перевести)
-    image = cv2.imread("images/bad/img_459.jpg")
+    # Декодирование из bytes
+    # with open("path_to_image.jpg", "rb") as f:
+    #     image_bytes = f.read()
+    # image = bytes_to_ndarray(image_bytes)
+
+    # Пример входных данных
+    image = cv2.imread("images/bad/img_92.jpg")
     rectangle_points = {"top_left": (10, 10), "bottom_right": (40, 60)}
 
     h, w, _ = image.shape
