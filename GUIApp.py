@@ -10,22 +10,53 @@ class GUIApp:
         self.label_face_count = tk.Label(self.root, text="Количество лиц: ")
         self.label_face_count.pack()
 
-        self.label_head_angles = tk.Label(self.root, text="Углы головы: ")
-        self.label_head_angles.pack()
+        self.label_head_pose = tk.Label(self.root, text="Углы головы: ")
+        self.label_head_pose.pack()
 
         self.label_eye_distance = tk.Label(self.root, text="Расстояние между глазами: ")
         self.label_eye_distance.pack()
 
+        self.label_head_size = tk.Label(self.root, text="Размер головы: ")
+        self.label_head_size.pack()
+
+        self.label_obstruction = tk.Label(self.root, text="Перекрытие лица: ")
+        self.label_obstruction.pack()
+
         self.label_expression = tk.Label(self.root, text="Выражение лица: ")
         self.label_expression.pack()
+
+        self.label_spoofing = tk.Label(self.root, text="Реальное лицо: ")
+        self.label_spoofing.pack()
 
         self.label_eyes_closed = tk.Label(self.root, text="Глаза закрыты: ")
         self.label_eyes_closed.pack()
 
-    def update_parameters(self, face_count, head_angles, eye_distance, face_expression, eyes_closed):
+        self.label_illumination = tk.Label(self.root, text="Освещённость: ")
+        self.label_illumination.pack()
+
+        self.label_distorsion = tk.Label(self.root, text="Дисторсия: ")
+        self.label_distorsion.pack()
+
+    def update_parameters(self,
+                          face_count=None,
+                          head_pose=None,
+                          eyes_distance=None,
+                          head_size=None,
+                          is_obstructed=None,
+                          emotion_status=None,
+                          is_real=None,
+                          eyes_closed=None,
+                          illumination=None,
+                          is_blurred=None
+                          ):
         """Обновляет значения параметров в GUI"""
         self.label_face_count.config(text=f"Количество лиц: {face_count}")
-        self.label_head_angles.config(text=f"Углы головы: Yaw: {head_angles['yaw']}, Pitch: {head_angles['pitch']}, Roll: {head_angles['roll']}")
-        self.label_eye_distance.config(text=f"Расстояние между глазами: {eye_distance}")
-        self.label_expression.config(text=f"Выражение лица: {face_expression}")
-        self.label_eyes_closed.config(text=f"Глаза закрыты: {'Да' if eyes_closed else 'Нет'}")
+        self.label_head_pose.config(text=f"Поворот головы: {head_pose}")
+        self.label_eye_distance.config(text=f"Расстояние между глазами: {eyes_distance}")
+        self.label_head_size.config(text=f"Размер головы: {head_size}")
+        self.label_obstruction.config(text=f"Перекрытие лица: {is_obstructed}")
+        self.label_expression.config(text=f"Выражение лица: {emotion_status}")
+        self.label_spoofing.config(text=f"Реальное лицо: {is_real}")
+        self.label_eyes_closed.config(text=f"Глаза закрыты: {eyes_closed}")
+        self.label_illumination.config(text=f"Освещённость: {illumination}")
+        self.label_distorsion.config(text=f"Дисторсия: {is_blurred}")

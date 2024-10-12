@@ -66,18 +66,16 @@ class FaceParams:
                     low_y = int(face_landmarks.landmark[152].y * h)
                     cv2.line(image, (up_x, up_y), (low_x, low_y), (0, 0, 255), 2)
 
-    def get_faces_count(self, image):
+    def get_faces_count(self, img_rgb):
         """Возвращает количество лиц на изображении"""
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image)
+        result = self.face_mesh.process(img_rgb)
         if result.multi_face_landmarks:
             return len(result.multi_face_landmarks)
         return 0
 
-    def get_head_pose(self, image):
+    def get_head_pose(self, img_rgb):
         """Возвращает углы наклона головы (yaw, pitch, roll)"""
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image)
+        result = self.face_mesh.process(img_rgb)
         if result.multi_face_landmarks:
 
             left_eye_idx = 33
@@ -96,23 +94,34 @@ class FaceParams:
                 eye_direction = right_eye - left_eye
                 head_direction = nose - (left_eye + right_eye) / 2
 
-                yaw = np.degrees(np.arctan2(eye_direction[1], eye_direction[0]))
-                pitch = np.degrees(np.arctan2(head_direction[2], head_direction[1]))
-                roll = np.degrees(np.arctan2(eye_direction[1], eye_direction[2]))
+                yaw = np.degrees(np.arctan2(head_direction[0], head_direction[2]))
+                pitch = np.degrees(np.arctan2(head_direction[1], head_direction[2]))
+                roll = np.degrees(np.arctan2(eye_direction[1], eye_direction[0]))
 
-                return {'yaw': yaw, 'pitch': pitch, 'roll': roll}
-        return {'yaw': None, 'pitch': None, 'roll': None}
+                yaw = round(yaw)
+                if yaw < 0:
+                    yaw += 360
+                roll = round(roll)
+                pitch = round(pitch)
+                if pitch < 0:
+                    pitch += 360
 
-    def get_eye_distance(self, image, distance_in_pixels=True):
+
+                head_angles = {'yaw': yaw, 'pitch': pitch, 'roll': roll}
+
+                return head_angles
+
+        return None
+
+    def get_eye_distance(self, img_rgb: np.ndarray, distance_in_pixels=True):
         """Возвращает расстояние между центрами глаз.
 
         Args:
-            image: Трёхканальное RGB изображение, представленное в формате numpy ndarray.
+            img_rgb: Трёхканальное RGB изображение, представленное в формате numpy ndarray.
             distance_in_pixels: Возвращать расстояние в пикселях. Если установлено false,
             то вернёт относительное расстояние.
         """
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image)
+        result = self.face_mesh.process(img_rgb)
         if result.multi_face_landmarks:
 
             left_pupil_idx = 473
@@ -121,20 +130,20 @@ class FaceParams:
             for face_landmarks in result.multi_face_landmarks:
                 landmarks = face_landmarks.landmark
 
-                h, w, _ = image.shape if distance_in_pixels else [1, 1, 1]
+                h, w, _ = img_rgb.shape if distance_in_pixels else [1, 1, 1]
 
                 left_pupil = np.array([landmarks[left_pupil_idx].x * w, landmarks[left_pupil_idx].y * h])
                 right_pupil = np.array([landmarks[right_pupil_idx].x * w, landmarks[right_pupil_idx].y * h])
 
-                eye_distance = np.linalg.norm(left_pupil - right_pupil)
+                eyes_distance = np.linalg.norm(left_pupil - right_pupil)
+                eyes_distance = round(eyes_distance, 3)
 
-                return eye_distance
+                return eyes_distance
         return None
 
-    def get_head_size(self, image):
+    def get_head_size(self, img_rgb):
         """Возвращает относительный размер головы по вертикали"""
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image)
+        result = self.face_mesh.process(img_rgb)
         if result.multi_face_landmarks:
 
             upper_face_idx = 10
@@ -148,17 +157,94 @@ class FaceParams:
 
                 head_size_v = np.linalg.norm(lower_landmark - upper_landmark)
 
+                head_size_v = round(head_size_v, 3)
+
                 return head_size_v
         return None
 
-    def check_face_obstruction(self, image):
-        """Проверяет, полностью ли открыто лицо на изображении"""
-        return "[mocked]"
+    def draw_central_rectangle(self, image, margin_ratio=0.2, color=(0, 255, 0), thickness=2):
+        """
+        Рисует центральный прямоугольник на изображении, который соответствует зоне для лица.
 
-    def check_neutral_status(self, image):
+        :param image: Изображение в формате numpy.ndarray (BGR).
+        :param margin_ratio: Отношение от краев кадра до центрального прямоугольника.
+        :param color: Цвет прямоугольника (по умолчанию зелёный).
+        :param thickness: Толщина линий прямоугольника.
+        :return: Изображение с нарисованным прямоугольником.
+        """
+        img_h, img_w, _ = image.shape
+
+        # Вычисляем границы прямоугольника
+        margin_w = int(img_w * margin_ratio)
+        margin_h = int(img_h * margin_ratio)
+
+        top_left = (margin_w, margin_h)
+        bottom_right = (img_w - margin_w, img_h - margin_h)
+
+        # Рисуем прямоугольник
+        cv2.rectangle(image, top_left, bottom_right, color, thickness)
+
+        return image
+
+    def is_face_in_frame(self, img_rgb, margin_ratio=0.2):
+        """
+        Проверяет, находится ли лицо в выделенной зоне экрана (в прямоугольнике, который представляет овал на клиенте).
+
+        :param img_rgb: Изображение в формате numpy.ndarray (BGR).
+        :param margin_ratio: Отношение от краев кадра до центрального прямоугольника.
+        :return: Булево значение: True, если лицо в центре, False в противном случае.
+        """
+        # Определяем размеры изображения
+        img_h, img_w, _ = img_rgb.shape
+
+        # Определяем центральный прямоугольник
+        margin_w = int(img_w * margin_ratio)
+        margin_h = int(img_h * margin_ratio)
+        central_rect = {
+            "left": margin_w,
+            "right": img_w - margin_w,
+            "top": margin_h,
+            "bottom": img_h - margin_h
+        }
+
+        # Получаем результат обработки лица
+        result = self.face_mesh.process(img_rgb)
+
+        if result.multi_face_landmarks:
+            for face_landmarks in result.multi_face_landmarks:
+                # Инициализация крайних точек лица
+                min_x, min_y = img_w, img_h
+                max_x, max_y = 0, 0
+
+                # Проходим по всем точкам лица и находим крайние
+                for landmark in face_landmarks.landmark:
+                    x = int(landmark.x * img_w)
+                    y = int(landmark.y * img_h)
+                    if x < min_x:
+                        min_x = x
+                    if x > max_x:
+                        max_x = x
+                    if y < min_y:
+                        min_y = y
+                    if y > max_y:
+                        max_y = y
+
+                # Проверяем, находятся ли крайние точки внутри центрального прямоугольника
+                if (min_x >= central_rect["left"] and max_x <= central_rect["right"] and
+                        min_y >= central_rect["top"] and max_y <= central_rect["bottom"]):
+                    return True
+                else:
+                    return False
+        return False
+
+    def check_face_obstruction(self, img_rgb):
+        """Проверяет, полностью ли открыто лицо на изображении"""
+        return False
+
+    def check_neutral_status(self, img_rgb):
         """Проверяет выражение лица на нейтральность"""
         try:
-            result = DeepFace.analyze(image,
+            result = DeepFace.analyze(img_rgb,
                                       actions=['emotion'],
                                       enforce_detection=False,
                                       detector_backend='ssd')
@@ -166,25 +252,25 @@ class FaceParams:
         except:
             return None
 
-    def check_spoofing(self, image):
+    def check_spoofing(self, img_rgb):
         """Проверяет лицо на изображении на подлиность"""
         try:
-            result = detection.extract_faces(image, anti_spoofing=True)
+            result = detection.extract_faces(img_rgb, anti_spoofing=True)
             return result[0]['is_real'], result[0]['antispoof_score']
-        except:
-            return None
+        except ValueError as v:
+            # print("check_spoofing --> Value Error: ", v)
+            return None, None
 
-    def check_eyes_closed(self, image):
+    def check_eyes_closed(self, img_rgb):
         """Проверяет, закрыты ли глаза"""
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        result = self.face_mesh.process(image)
+        result = self.face_mesh.process(img_rgb)
 
         eye_idxs = {
             "left": [33, 160, 158, 133, 153, 144],
             "right": [362, 385, 387, 263, 373, 380],
         }
 
-        h, w, _ = image.shape
+        h, w, _ = img_rgb.shape
 
         if result.multi_face_landmarks:
             for face_landmarks in result.multi_face_landmarks:
@@ -201,7 +287,7 @@ class FaceParams:
                     eyes_closed = False
 
                 return eyes_closed, eyes_rate
-        return None
+        return None, None
 
     def get_eye_rate(self, landmarks, eye_idxs):
         """Технический метод, возращает отношение длины и ширины глаза"""
@@ -224,16 +310,15 @@ class FaceParams:
 
         return eye_rate
 
-    def calculate_face_brightness(self, image):
-        """Функция для вычисления средней освещённости зоны лица на изображении"""
-        # img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(image)
+    def calculate_face_illumination(self, img_rgb):
+        """Функция для вычисления средней освещённости и дисперсии зоны лица на изображении"""
+        results = self.face_mesh.process(img_rgb)
 
         if not results.multi_face_landmarks:
             return None
         face_landmarks = results.multi_face_landmarks[0]
 
-        h, w, _ = image.shape
+        h, w, _ = img_rgb.shape
 
         face_coords = []
         for landmark in face_landmarks.landmark:
@@ -246,13 +331,19 @@ class FaceParams:
         mask = np.zeros((h, w), dtype=np.uint8)
         cv2.fillConvexPoly(mask, face_coords, 255)
 
-        face_region = cv2.bitwise_and(image, image, mask=mask)
+        face_region = cv2.bitwise_and(img_rgb, img_rgb, mask=mask)
 
         face_gray = cv2.cvtColor(face_region, cv2.COLOR_BGR2GRAY)
 
-        brightness = cv2.mean(face_gray, mask=mask)[0]
+        # Вычисляем среднее значение яркости и стандартное отклонение
+        mean, stddev = cv2.meanStdDev(face_gray, mask=mask)
+        brightness = mean[0][0]
+        variance = stddev[0][0] ** 2  # Дисперсия
 
-        return brightness
+        brightness = round(brightness)
+        variance = round(variance)
+
+        return brightness, variance
 
     def calculate_blurriness(self, image):
         """Функция для определения размытости изображения с использованием лапласиана.
@@ -270,7 +361,3 @@ class FaceParams:
             is_blurred = False
 
         return laplacian_var, is_blurred
-
-
-
-

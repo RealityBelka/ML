@@ -1,96 +1,86 @@
 import cv2
-import numpy as np
-import json
 from FaceParams import FaceParams
+# from time import time
 
 
-def bytes_to_ndarray(image_bytes):
-    # Преобразование байтов в numpy массив (массив байт)
-    nparr = np.frombuffer(image_bytes, np.uint8)
+def image_process(face_params, image):
+    flag = False  # True, если проверка пройдена успешно
 
-    # Декодирование изображения из numpy массива в формате OpenCV
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    return image
+    '''1'''
+    faces_count = face_params.get_faces_count(img_rgb)
+    if faces_count > 1:
+        return flag, "Больше одного лица на изображении"
+    if faces_count < 1:
+        return flag, "Лицо не обнаружено"
+
+    '''2'''
+    # head_size = face_params.get_head_size(img_rgb)  # Выполняет ту же функцию, что eyes_distance
+    is_in_frame = face_params.is_face_in_frame(image)
+    if is_in_frame:
+        face_params.draw_central_rectangle(image, color=(0, 255, 0))
+    else:
+        face_params.draw_central_rectangle(image, color=(0, 0, 255))
+        return flag, "Лицо должно полностью помещаться в рамку"
+
+    '''3'''
+    eyes_distance = face_params.get_eye_distance(img_rgb)
+    if eyes_distance < 0.1:
+        return flag, "Приблизьте телефон к лицу"
+
+    '''4'''
+    head_pose = face_params.get_head_pose(img_rgb)
+    if not (160 <= head_pose["yaw"] <= 200 and 100 <= head_pose["pitch"] <= 140 and -20 <= head_pose["roll"] <= 20):
+        return flag, "Держите голову прямо"
+
+    '''5'''
+    # is_obstructed = face_params.check_face_obstruction(img_rgb)
+
+    '''6'''
+    illumination = face_params.calculate_face_brightness(img_rgb)
+
+    '''7'''
+    # distortion, is_blurred = face_params.calculate_blurriness(image)
+
+    '''8'''
+    # not_neutral = face_params.check_neutral_status(img_rgb)
+
+    '''9'''
+    # eyes_closed, eyes_rate = face_params.check_eyes_closed(img_rgb)
+
+    '''10'''
+    # is_real, antispoof_score = face_params.check_spoofing(img_rgb)
+
+
 
 
 def main():
+
     SHOW_IMAGE = True
 
     face_params = FaceParams()
 
-    image = cv2.imread("images/image.png") # Либо bytes_to_ndarray
+    cap = cv2.VideoCapture(0)
 
-    assert image is not None, "Изображение не загружено. Проверьте путь к файлу."
+    while True:
+        success, image = cap.read()
+        if not success:
+            break
 
-    h, w, _ = image.shape
+        h, w, _ = image.shape
 
-    image = cv2.resize(image, (int(w / 2), int(h / 2)))
+        image = cv2.resize(image, (int(w / 3), int(h / 3)))
 
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Вызов функций определения параметров
-    faces_count = face_params.get_faces_count(img_rgb)
+        if SHOW_IMAGE:
+            face_params.draw_face_landmarks(image)
+            cv2.imshow("Image", image)
+            if cv2.waitKey(1) & 0xFF == 27:  # ESC для выхода
+                break
 
-    result = {
-        "faces_count": faces_count
-    }
-
-    if faces_count == 1:
-        head_pose = face_params.get_head_pose(img_rgb)
-        eyes_distance = face_params.get_eye_distance(img_rgb, True)
-        head_size = face_params.get_head_size(img_rgb)
-        is_obstructed = face_params.check_face_obstruction(img_rgb)
-        emotion_status = face_params.check_neutral_status(img_rgb)
-        is_real, antispoof_score = face_params.check_spoofing(img_rgb)
-        eyes_closed, eyes_rate = face_params.check_eyes_closed(img_rgb)
-        illumination = face_params.calculate_face_brightness(img_rgb)
-        distortion, is_blurred = face_params.calculate_blurriness(image)
-
-        result.update({
-            "head_pose": head_pose,
-            "eyes_distance": eyes_distance,
-            "head_size": head_size,
-            "is_obstructed": is_obstructed,
-            "emotion_status": emotion_status,
-            "is_real": is_real,
-            "antispoof_score": antispoof_score,
-            "eyes_closed": eyes_closed,
-            "eyes_rate": eyes_rate,
-            "illumination": illumination,
-            "distortion": distortion,
-            "is_blurred": is_blurred
-        })
-
-    else:
-        result.update({
-            "head_pose": None,
-            "eyes_distance": None,
-            "head_size": None,
-            "is_obstructed": None,
-            "emotion_status": None,
-            "is_real": None,
-            "antispoof_score": None,
-            "eyes_closed": None,
-            "eyes_rate": None,
-            "illumination": None,
-            "distortion": None,
-            "is_blurred": None
-        })
-
-    # Вывод данных в формате JSON
-    result_json = json.dumps(result, indent=4)
-    print(result_json)
-
-    # Запись данных в файл JSON
-    with open("output.json", "w") as outfile:
-        json.dump(result, outfile, indent=4)
-
-    if SHOW_IMAGE:
-        face_params.draw_face_landmarks(image)
-        cv2.imshow("Image", image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    image.release()
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
