@@ -241,8 +241,8 @@ class FaceParams:
                 total_points = len(face_landmarks.landmark)
                 visibility_ratio = visible_points / total_points
 
-                if visibility_ratio < 0.9:
-                    return True  # True, если перекрыто более 10%
+                if visibility_ratio < 0.75:
+                    return True  # True, если перекрыто более 25%
 
                 obstruction_detected = self.detect_glasses(img_rgb, face_landmarks)
                 if obstruction_detected:

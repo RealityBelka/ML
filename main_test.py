@@ -32,7 +32,6 @@ def main():
         if faces_count == 1:
             head_pose = face_params.get_head_pose(img_rgb)
             eyes_distance = face_params.get_eye_distance(img_rgb, False)
-            # head_size = face_params.get_head_size(img_rgb)
             is_obstructed = face_params.check_face_obstruction(img_rgb)
             is_neutral = face_params.check_neutral_status(img_rgb)
             is_real = face_params.check_spoofing(img_rgb)

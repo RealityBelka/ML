@@ -27,12 +27,12 @@ def image_process(face_params, image, rectangle_coords):
 
     '''3.5'''
     mono_background = face_params.calculate_background_uniformity(image)
-    if mono_background > 18:
+    if mono_background > 22:
         return {"ok": flag, "message": "Слишкои пёстрый задний фон"}
 
     '''4'''
     head_pose = face_params.get_head_pose(img_rgb)
-    if not ((160 <= head_pose["yaw"] <= 200) and (100 <= head_pose["pitch"] <= 160) and (-20 <= head_pose["roll"] <= 20)):
+    if not ((140 <= head_pose["yaw"] <= 220) and (80 <= head_pose["pitch"] <= 180) and (-40 <= head_pose["roll"] <= 40)):
         return flag, "Держите голову прямо"
 
     '''5'''
@@ -58,10 +58,9 @@ def image_process(face_params, image, rectangle_coords):
         return flag, "Выражение лица должно быть нейтральным"
 
     '''9'''
-    # Обрабатывается постфактум на клиенте
-    # eyes_closed = face_params.check_eyes_closed(img_rgb)
-    # if eyes_closed:
-    #     return flag, "Откройте глаза"
+    eyes_closed = face_params.check_eyes_closed(img_rgb)
+    if eyes_closed:
+        return flag, "Откройте глаза"
 
     '''10'''
     is_real = face_params.check_spoofing(img_rgb)
