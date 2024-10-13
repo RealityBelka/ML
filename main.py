@@ -96,13 +96,13 @@ def main():
 
     # Пример входных данных
     image = cv2.imread("images/good/MS_Cornelius_Imani_CloseUp.jpg")
-    rectangle_points = {"top_left": (10, 10), "bottom_right": (40, 60)}
+    rectangle_points = [0, 400, 0, 400]
 
     h, w, _ = image.shape
 
     image = cv2.resize(image, (int(w / 3), int(h / 3)))
 
-    ok, message = image_process(face_params, image)
+    ok, message = image_process(face_params, image, rectangle_points)
 
     if SHOW_IMAGE:
         face_params.draw_face_landmarks(image)
