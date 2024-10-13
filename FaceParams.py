@@ -15,6 +15,8 @@ class FaceParams:
             min_detection_confidence=detection_confidence,
             min_tracking_confidence=tracking_confidence
         )
+        self.mp_pose = mp.solutions.pose
+        self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5)
         self.mp_drawing = mp.solutions.drawing_utils
 
     def draw_face_landmarks(self, image, face_mesh=False, pupils_landmarks=False, vertical_face_line=False):
@@ -173,49 +175,40 @@ class FaceParams:
         """
         img_h, img_w, _ = image.shape
 
-        # Вычисляем границы прямоугольника
         margin_w = int(img_w * margin_ratio)
         margin_h = int(img_h * margin_ratio)
 
         top_left = (margin_w, margin_h)
         bottom_right = (img_w - margin_w, img_h - margin_h)
 
-        # Рисуем прямоугольник
         cv2.rectangle(image, top_left, bottom_right, color, thickness)
 
         return image
 
-    def is_face_in_frame(self, img_rgb, margin_ratio=0.2):
+    def is_face_in_frame(self, img_rgb, rectangle_coords):
         """
         Проверяет, находится ли лицо в выделенной зоне экрана (в прямоугольнике, который представляет овал на клиенте).
 
         :param img_rgb: Изображение в формате numpy.ndarray (BGR).
-        :param margin_ratio: Отношение от краев кадра до центрального прямоугольника.
+        :param rectangle_coords: Массив с координатами ограничивающей рамки.
         :return: Булево значение: True, если лицо в центре, False в противном случае.
         """
-        # Определяем размеры изображения
         img_h, img_w, _ = img_rgb.shape
 
-        # Определяем центральный прямоугольник
-        margin_w = int(img_w * margin_ratio)
-        margin_h = int(img_h * margin_ratio)
-        central_rect = {
-            "left": margin_w,
-            "right": img_w - margin_w,
-            "top": margin_h,
-            "bottom": img_h - margin_h
+        bounding_rectangle = {
+            "left": rectangle_coords[0],
+            "right": rectangle_coords[1],
+            "top": rectangle_coords[2],
+            "bottom": rectangle_coords[3]
         }
 
-        # Получаем результат обработки лица
         result = self.face_mesh.process(img_rgb)
 
         if result.multi_face_landmarks:
             for face_landmarks in result.multi_face_landmarks:
-                # Инициализация крайних точек лица
                 min_x, min_y = img_w, img_h
                 max_x, max_y = 0, 0
 
-                # Проходим по всем точкам лица и находим крайние
                 for landmark in face_landmarks.landmark:
                     x = int(landmark.x * img_w)
                     y = int(landmark.y * img_h)
@@ -228,9 +221,8 @@ class FaceParams:
                     if y > max_y:
                         max_y = y
 
-                # Проверяем, находятся ли крайние точки внутри центрального прямоугольника
-                if (min_x >= central_rect["left"] and max_x <= central_rect["right"] and
-                        min_y >= central_rect["top"] and max_y <= central_rect["bottom"]):
+                if (min_x >= bounding_rectangle["left"] and max_x <= bounding_rectangle["right"] and
+                        min_y >= bounding_rectangle["top"] and max_y <= bounding_rectangle["bottom"]):
                     return True
                 else:
                     return False
@@ -242,19 +234,24 @@ class FaceParams:
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
-                landmarks_to_check = [1, 6, 33, 61, 133, 199, 206, 263, 291, 362, 426]
-                obstruction_detected = False
+                visible_points = 0
+                for landmark in face_landmarks.landmark:
+                    x, y = int(landmark.x * img_rgb.shape[1]), int(landmark.y * img_rgb.shape[0])
 
-                for idx in landmarks_to_check:
-                    if face_landmarks.landmark[idx].visibility < 0.3:
-                        return True
+                    if 0 <= x < img_rgb.shape[1] and 0 <= y < img_rgb.shape[0]:
+                        visible_points += 1
 
-                # obstruction_detected = self.detect_glasses(img_rgb, face_landmarks)
+                total_points = len(face_landmarks.landmark)
+                visibility_ratio = visible_points / total_points
 
+                if visibility_ratio < 0.9:
+                    return True  # True, если перекрыто более 10%
+
+                obstruction_detected = self.detect_glasses(img_rgb, face_landmarks)
                 if obstruction_detected:
                     return True
 
-            return False
+                return False
         else:
             return True
 
@@ -276,7 +273,7 @@ class FaceParams:
         face_center_color = self.get_face_center_color(image, face_landmarks)
         color_diff = np.linalg.norm(np.array(mean_color) - np.array(face_center_color))
 
-        if color_diff > 50:  # Порог контраста
+        if color_diff > 40:  # Порог контраста
             return True
 
         return False
@@ -382,7 +379,6 @@ class FaceParams:
 
         face_gray = cv2.cvtColor(face_region, cv2.COLOR_BGR2GRAY)
 
-        # Вычисляем среднее значение яркости и стандартное отклонение
         mean, stddev = cv2.meanStdDev(face_gray, mask=mask)
         brightness = mean[0][0]
         variance = stddev[0][0] ** 2  # Дисперсия
@@ -401,7 +397,6 @@ class FaceParams:
         """
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Применение Лапласиана для вычисления резкости
         laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
         if laplacian_var < 200:
             is_blurred = True
@@ -409,3 +404,64 @@ class FaceParams:
             is_blurred = False
 
         return laplacian_var, is_blurred
+
+    def calculate_background_uniformity(self, image):
+        """Функция для определения однотонности фона, исключая лицо и тело."""
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        h, w = gray_image.shape
+
+        face_coords, body_coords = self.get_face_and_body_coords(image)
+
+        mask = np.zeros((h, w), dtype=np.uint8)
+
+        if face_coords is not None:
+            cv2.fillConvexPoly(mask, face_coords, 255)
+
+        if body_coords is not None:
+            cv2.fillConvexPoly(mask, body_coords, 255)
+
+        mask_inv = cv2.bitwise_not(mask)
+
+        background = cv2.bitwise_and(gray_image, gray_image, mask=mask_inv)
+
+        background = cv2.GaussianBlur(background, (5, 5), 0)
+
+        mean, stddev = cv2.meanStdDev(background, mask=mask_inv)
+
+        brightness = mean[0][0]
+        variance = stddev[0][0] ** 2  # Дисперсия
+
+        brightness = round(brightness)
+        variance = round(variance)
+        CV = int(variance / brightness)
+
+        return CV
+
+    def get_face_and_body_coords(self, image):
+        """Функция для получения координат лица и тела."""
+        face_coords = None
+        body_coords = None
+
+        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        results_pose = self.pose.process(img_rgb)
+        if results_pose.pose_landmarks:
+            body_landmarks = results_pose.pose_landmarks.landmark
+            body_coords = np.array([
+                [int(body_landmarks[11].x * image.shape[1]), int(body_landmarks[11].y * image.shape[0])],
+                [int(body_landmarks[12].x * image.shape[1]), int(body_landmarks[12].y * image.shape[0])],
+                [int(body_landmarks[23].x * image.shape[1]), int(body_landmarks[23].y * image.shape[0])],
+                [int(body_landmarks[24].x * image.shape[1]), int(body_landmarks[24].y * image.shape[0])]
+            ], np.int32)
+
+        results_face = self.face_mesh.process(img_rgb)
+        if results_face.multi_face_landmarks:
+            face_landmarks = results_face.multi_face_landmarks[0].landmark
+            face_coords = np.array([
+                [int(face_landmarks[10].x * image.shape[1]), int(face_landmarks[10].y * image.shape[0])],
+                [int(face_landmarks[152].x * image.shape[1]), int(face_landmarks[152].y * image.shape[0])],
+                [int(face_landmarks[234].x * image.shape[1]), int(face_landmarks[234].y * image.shape[0])],
+                [int(face_landmarks[454].x * image.shape[1]), int(face_landmarks[454].y * image.shape[0])]
+            ], np.int32)
+
+        return face_coords, body_coords

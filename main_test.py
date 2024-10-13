@@ -39,6 +39,7 @@ def main():
             eyes_closed = face_params.check_eyes_closed(img_rgb)
             illumination = face_params.calculate_face_illumination(img_rgb)
             distortion = face_params.calculate_blurriness(image)
+            background = face_params.calculate_background_uniformity(image)
 
             # Обновление GUI параметров
             gui_app.update_parameters(faces_count,
@@ -50,7 +51,8 @@ def main():
                                       is_real=is_real,
                                       eyes_closed=eyes_closed,
                                       illumination=illumination,
-                                      distortion=distortion
+                                      distortion=distortion,
+                                      background=background
                                       )
 
             root.update_idletasks()

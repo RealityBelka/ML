@@ -37,6 +37,9 @@ class GUIApp:
         self.label_distorsion = tk.Label(self.root, text="Дисторсия: ")
         self.label_distorsion.pack()
 
+        self.label_background = tk.Label(self.root, text="Задний фон: ")
+        self.label_background.pack()
+
     def update_parameters(self,
                           face_count=None,
                           head_pose=None,
@@ -47,7 +50,8 @@ class GUIApp:
                           is_real=None,
                           eyes_closed=None,
                           illumination=None,
-                          distortion=None
+                          distortion=None,
+                          background=None
                           ):
         """Обновляет значения параметров в GUI"""
         self.label_face_count.config(text=f"Количество лиц: {face_count}")
@@ -60,3 +64,4 @@ class GUIApp:
         self.label_eyes_closed.config(text=f"Глаза закрыты: {eyes_closed}")
         self.label_illumination.config(text=f"Освещённость: {illumination}")
         self.label_distorsion.config(text=f"Дисторсия: {distortion}")
+        self.label_background.config(text=f"Задний фон: {background}")

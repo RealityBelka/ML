@@ -3,7 +3,7 @@ import numpy as np
 from FaceParams import FaceParams
 
 
-def image_process(face_params, image):
+def image_process(face_params, image, rectangle_coords):
     flag = False  # True, если проверка пройдена успешно
 
     img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -16,30 +16,33 @@ def image_process(face_params, image):
         return flag, "Лицо не обнаружено"
 
     '''2'''
-    '''# head_size = face_params.get_head_size(img_rgb)  # Выполняет ту же функцию, что eyes_distance
-    is_in_frame = face_params.is_face_in_frame(image)
-    if is_in_frame:
-        face_params.draw_central_rectangle(image, color=(0, 255, 0))
-    else:
-        face_params.draw_central_rectangle(image, color=(0, 0, 255))
-        return flag, "Лицо должно полностью помещаться в рамку"'''
+    is_in_frame = face_params.is_face_in_frame(image, rectangle_coords)
+    if not is_in_frame:
+        return flag, "Лицо должно полностью помещаться в рамку"
 
     '''3'''
     eyes_distance = face_params.get_eye_distance(img_rgb)
     if eyes_distance < 0.1:
         return flag, "Приблизьте телефон к лицу"
 
+    '''3.5'''
+    mono_background = face_params.calculate_background_uniformity(image)
+    if mono_background > 18:
+        return {"ok": flag, "message": "Слишкои пёстрый задний фон"}
+
     '''4'''
     head_pose = face_params.get_head_pose(img_rgb)
-    if not (160 <= head_pose["yaw"] <= 200 and 100 <= head_pose["pitch"] <= 140 and -20 <= head_pose["roll"] <= 20):
+    if not ((160 <= head_pose["yaw"] <= 200) and (100 <= head_pose["pitch"] <= 160) and (-20 <= head_pose["roll"] <= 20)):
         return flag, "Держите голову прямо"
 
     '''5'''
-    # is_obstructed = face_params.check_face_obstruction(img_rgb)
+    is_obstructed = face_params.check_face_obstruction(img_rgb)
+    if is_obstructed:
+        return flag, "Лицо должно быть полностью открыто"
 
     '''6'''
     brightness, CV = face_params.calculate_face_illumination(img_rgb)
-    if brightness < 50 or 150 < brightness:
+    if brightness < 50 or 170 < brightness:
         return flag, "Обеспечьте равномерное освещение лица (brightness)"
     if CV > 15:
         return flag, "Обеспечьте равномерное освещение лица (CV)"
@@ -92,7 +95,7 @@ def main():
     # image = bytes_to_ndarray(image_bytes)
 
     # Пример входных данных
-    image = cv2.imread("images/bad/img_92.jpg")
+    image = cv2.imread("images/good/MS_Cornelius_Imani_CloseUp.jpg")
     rectangle_points = {"top_left": (10, 10), "bottom_right": (40, 60)}
 
     h, w, _ = image.shape
