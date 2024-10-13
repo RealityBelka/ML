@@ -163,23 +163,25 @@ class FaceParams:
                 return head_size_v
         return None
 
-    def draw_central_rectangle(self, image, margin_ratio=0.2, color=(0, 255, 0), thickness=2):
+    def draw_central_rectangle(self, image, rectangle_coords, color=(0, 255, 0), thickness=2):
         """
         Рисует центральный прямоугольник на изображении, который соответствует зоне для лица.
-
         :param image: Изображение в формате numpy.ndarray (BGR).
-        :param margin_ratio: Отношение от краев кадра до центрального прямоугольника.
+        :param rectangle_coords: Координаты прямоугольника.
         :param color: Цвет прямоугольника (по умолчанию зелёный).
         :param thickness: Толщина линий прямоугольника.
         :return: Изображение с нарисованным прямоугольником.
         """
         img_h, img_w, _ = image.shape
 
-        margin_w = int(img_w * margin_ratio)
-        margin_h = int(img_h * margin_ratio)
+        # Убедитесь, что координаты рамки в пределах изображения
+        left = max(0, rectangle_coords[0])
+        right = min(img_w, rectangle_coords[1])
+        top = max(0, rectangle_coords[2])
+        bottom = min(img_h, rectangle_coords[3])
 
-        top_left = (margin_w, margin_h)
-        bottom_right = (img_w - margin_w, img_h - margin_h)
+        top_left = (left, top)
+        bottom_right = (right, bottom)
 
         cv2.rectangle(image, top_left, bottom_right, color, thickness)
 
@@ -190,16 +192,16 @@ class FaceParams:
         Проверяет, находится ли лицо в выделенной зоне экрана (в прямоугольнике, который представляет овал на клиенте).
 
         :param img_rgb: Изображение в формате numpy.ndarray (BGR).
-        :param rectangle_coords: Массив с координатами ограничивающей рамки.
+        :param rectangle_coords: Массив с координатами ограничивающей рамки [left, right, top, bottom].
         :return: Булево значение: True, если лицо в центре, False в противном случае.
         """
         img_h, img_w, _ = img_rgb.shape
 
         bounding_rectangle = {
-            "left": rectangle_coords[0],
-            "right": rectangle_coords[1],
-            "top": rectangle_coords[2],
-            "bottom": rectangle_coords[3]
+            "left": max(0, rectangle_coords[0]),
+            "right": min(img_w, rectangle_coords[1]),
+            "top": max(0, rectangle_coords[2]),
+            "bottom": min(img_h, rectangle_coords[3])
         }
 
         result = self.face_mesh.process(img_rgb)
@@ -212,20 +214,15 @@ class FaceParams:
                 for landmark in face_landmarks.landmark:
                     x = int(landmark.x * img_w)
                     y = int(landmark.y * img_h)
-                    if x < min_x:
-                        min_x = x
-                    if x > max_x:
-                        max_x = x
-                    if y < min_y:
-                        min_y = y
-                    if y > max_y:
-                        max_y = y
+                    min_x = min(min_x, x)
+                    max_x = max(max_x, x)
+                    min_y = min(min_y, y)
+                    max_y = max(max_y, y)
 
                 if (min_x >= bounding_rectangle["left"] and max_x <= bounding_rectangle["right"] and
                         min_y >= bounding_rectangle["top"] and max_y <= bounding_rectangle["bottom"]):
                     return True
-                else:
-                    return False
+
         return False
 
     def check_face_obstruction(self, img_rgb):
